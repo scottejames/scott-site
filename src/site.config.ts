@@ -9,6 +9,8 @@ export const site = {
     { href: '/blog/', label: 'Writing' },
     { href: '/private/', label: 'Private' },
   ],
+  // Page view counts. Set to '' to turn off. Stats: https://scottejames.goatcounter.com
+  goatcounter: 'https://scottejames.goatcounter.com/count',
   links: [
     { href: 'https://www.linkedin.com/in/scottejames/', label: 'LinkedIn' },
     { href: 'https://github.com/scottejames', label: 'GitHub' },
