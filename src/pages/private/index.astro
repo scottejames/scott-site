@@ -1,0 +1,234 @@
+---
+// The private blog. Every private post is bundled, encrypted at build time and decrypted
+// in the browser with the password. Nothing readable is published.
+import Base from '../../layouts/Base.astro';
+import { getPosts, formatDate } from '../../lib/posts';
+import { encrypt } from '../../lib/encrypt';
+
+const password = import.meta.env.PRIVATE_BLOG_PASSWORD as string | undefined;
+const posts = await getPosts('private');
+
+const bundle = posts.map((p) => ({
+  id: p.id,
+  title: p.data.title,
+  date: formatDate(p.data.date),
+  summary: p.data.summary ?? '',
+  html: p.rendered?.html ?? '',
+}));
+
+let payload = null;
+if (password) {
+  payload = await encrypt(JSON.stringify(bundle), password);
+} else if (posts.length) {
+  console.warn('[private] PRIVATE_BLOG_PASSWORD is not set, so private posts were left out.');
+}
+---
+
+<Base title="Private" noindex>
+  <div class="page">
+    <h1>Private</h1>
+
+    {
+      payload ? (
+        <>
+          <form id="unlock" class="unlock">
+            <p class="page-intro">These posts are encrypted. Enter the password to read them.</p>
+            <label for="pw">Password</label>
+            <div class="unlock-row">
+              <input id="pw" type="password" autocomplete="current-password" required />
+              <button class="button" type="submit">Unlock</button>
+            </div>
+            <p id="unlock-msg" class="unlock-msg" role="status" aria-live="polite" />
+          </form>
+          <div id="vault" hidden>
+            <div id="vault-body" />
+            <p class="vault-actions">
+              <button id="lock" class="link-button" type="button">
+                Lock
+              </button>
+            </p>
+          </div>
+          <script type="application/json" id="payload" set:html={JSON.stringify(payload)} />
+        </>
+      ) : (
+        <p class="empty">
+          The private blog isn't set up yet. Add PRIVATE_BLOG_PASSWORD to .env and rebuild.
+        </p>
+      )
+    }
+  </div>
+</Base>
+
+<script>
+  const KEY_STORE = 'private-blog-key';
+
+  type Post = { id: string; title: string; date: string; summary: string; html: string };
+  type Payload = { salt: string; iv: string; data: string; iterations: number };
+
+  const payloadEl = document.getElementById('payload');
+  if (payloadEl) init(JSON.parse(payloadEl.textContent!) as Payload);
+
+  function init(payload: Payload) {
+    const form = document.getElementById('unlock') as HTMLFormElement;
+    const input = document.getElementById('pw') as HTMLInputElement;
+    const msg = document.getElementById('unlock-msg')!;
+    const vault = document.getElementById('vault')!;
+    const body = document.getElementById('vault-body')!;
+    let posts: Post[] = [];
+
+    const bytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+    async function deriveKey(password: string) {
+      const base = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(password),
+        'PBKDF2',
+        false,
+        ['deriveKey'],
+      );
+      return crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt: bytes(payload.salt), iterations: payload.iterations, hash: 'SHA-256' },
+        base,
+        { name: 'AES-GCM', length: 256 },
+        true,
+        ['decrypt'],
+      );
+    }
+
+    async function open(key: CryptoKey) {
+      const plain = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv: bytes(payload.iv) },
+        key,
+        bytes(payload.data),
+      );
+      posts = JSON.parse(new TextDecoder().decode(plain));
+      form.hidden = true;
+      vault.hidden = false;
+      show();
+    }
+
+    function show() {
+      const id = decodeURIComponent(location.hash.slice(1));
+      const post = posts.find((p) => p.id === id);
+      if (post) {
+        body.innerHTML = `
+          <article>
+            <span class="post-date">${post.date}</span>
+            <h2 class="private-title">${escape(post.title)}</h2>
+            <div class="prose">${post.html}</div>
+            <p><a href="#">Back to private posts</a></p>
+          </article>`;
+        window.scrollTo(0, 0);
+        return;
+      }
+      body.innerHTML = posts.length
+        ? `<ul class="post-list">${posts
+            .map(
+              (p) => `<li>
+                <span class="post-date">${p.date}</span>
+                <a href="#${encodeURIComponent(p.id)}">${escape(p.title)}</a>
+                ${p.summary ? `<p>${escape(p.summary)}</p>` : ''}
+              </li>`,
+            )
+            .join('')}</ul>`
+        : '<p class="empty">No private posts yet.</p>';
+    }
+
+    function escape(s: string) {
+      const d = document.createElement('div');
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = 'Unlocking…';
+      try {
+        const key = await deriveKey(input.value);
+        await open(key);
+        const raw = await crypto.subtle.exportKey('raw', key);
+        try {
+          sessionStorage.setItem(KEY_STORE, btoa(String.fromCharCode(...new Uint8Array(raw))));
+        } catch {}
+        input.value = '';
+        msg.textContent = '';
+      } catch {
+        msg.textContent = "That password didn't unlock the posts. Check it and try again.";
+      }
+    });
+
+    document.getElementById('lock')!.addEventListener('click', () => {
+      try {
+        sessionStorage.removeItem(KEY_STORE);
+      } catch {}
+      posts = [];
+      body.innerHTML = '';
+      vault.hidden = true;
+      form.hidden = false;
+      history.replaceState(null, '', location.pathname);
+      input.focus();
+    });
+
+    window.addEventListener('hashchange', () => posts.length && show());
+
+    // Stay unlocked for the rest of this browser tab's session.
+    let saved: string | null = null;
+    try {
+      saved = sessionStorage.getItem(KEY_STORE);
+    } catch {}
+    if (saved) {
+      crypto.subtle
+        .importKey('raw', bytes(saved), 'AES-GCM', true, ['decrypt'])
+        .then(open)
+        .catch(() => sessionStorage.removeItem(KEY_STORE));
+    }
+  }
+</script>
+
+<style>
+  .unlock label {
+    display: block;
+    font-family: var(--display);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+  .unlock-row {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .unlock input {
+    flex: 1 1 14rem;
+    font: inherit;
+    padding: 0.45em 0.7em;
+    border: 1px solid var(--muted);
+    border-radius: 4px;
+    background: var(--paper-raised);
+    color: var(--ink);
+  }
+  .unlock-msg {
+    min-height: 1.6em;
+    margin-top: 0.75rem;
+    color: var(--muted);
+  }
+  :global(.private-title) {
+    font-size: clamp(2.2rem, 5vw, 3.2rem);
+  }
+  .vault-actions {
+    margin-top: 2.5rem;
+  }
+  .link-button {
+    font: 600 1.1rem var(--display);
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--muted);
+    text-decoration: underline dashed var(--path) 2px;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+  .link-button:hover {
+    color: var(--path);
+  }
+</style>

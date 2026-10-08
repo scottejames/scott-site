@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.astro/
+.env
+# Private posts never leave this machine unencrypted
+src/private/*
+!src/private/README.md
+
+# Raw personal notes used to write the site
+bio.md
+links
+CV/

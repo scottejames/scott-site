@@ -1,0 +1,218 @@
+---
+import Base from '../layouts/Base.astro';
+import Topo from '../components/Topo.astro';
+import { getPosts, formatDate } from '../lib/posts';
+
+const latest = (await getPosts('blog')).slice(0, 3);
+---
+
+<Base>
+  <section class="hero">
+    <div class="hero-map"><Topo /></div>
+    <div class="hero-text">
+      <h1>Scott James</h1>
+      <p>
+        I run developer experience engineering at an asset management firm in London. I don't get
+        paid to write code any more, so my job now is making life better for the people who do.
+      </p>
+      <p>Outside work I walk long distances, run parkrun and help out with Scouts in Mid Sussex.</p>
+    </div>
+  </section>
+
+  <section class="key" aria-labelledby="key-heading">
+    <h2 id="key-heading" class="visually-hidden">About me</h2>
+
+    <article class="key-item">
+      <header>
+        <svg class="symbol" viewBox="0 0 40 24" aria-hidden="true"
+          ><rect x="12" y="4" width="16" height="16" fill="currentColor"></rect></svg
+        >
+        <h3>Work</h3>
+      </header>
+      <div>
+        <p>
+          I'm a programmer who became a leader but never stopped caring about the craft. I lead the
+          team whose job is to make developers' lives better: faster feedback, fewer obstacles, tools
+          that get out of the way.
+        </p>
+        <p>
+          I believe in mechanical sympathy. You build better software when you understand what the
+          machine underneath is actually doing.
+        </p>
+      </div>
+    </article>
+
+    <article class="key-item">
+      <header>
+        <svg class="symbol" viewBox="0 0 40 24" aria-hidden="true"
+          ><path
+            d="M2 12 H38"
+            stroke="var(--path)"
+            stroke-width="3.5"
+            stroke-dasharray="6 4"
+            stroke-linecap="round"></path></svg
+        >
+        <h3>On foot</h3>
+      </header>
+      <div>
+        <p>
+          I did plenty of ultra hikes years ago, then let things slide. Two years ago I set out to
+          exercise every single day. I've lost a lot of weight, I'm now a regular parkrunner, and I
+          recently finished a 40 mile hike.
+        </p>
+      </div>
+    </article>
+
+    <article class="key-item">
+      <header>
+        <svg class="symbol" viewBox="0 0 40 24" aria-hidden="true"
+          ><path d="M20 3 L33 21 H7 Z" fill="none" stroke="currentColor" stroke-width="2.5"
+          ></path><path d="M20 10 L25 21 H15 Z" fill="currentColor"></path></svg
+        >
+        <h3>Scouting</h3>
+      </header>
+      <div>
+        <p>
+          I've been a Scout leader for about ten years, with 1st and 10th Haywards Heath, mostly with
+          Beavers and soon with Cubs. These days I don't hold a regular section but help wherever a
+          group needs me.
+        </p>
+        <p>I run the hike training programme for Mid Sussex and get involved with JOTI.</p>
+      </div>
+    </article>
+
+    <article class="key-item">
+      <header>
+        <svg class="symbol" viewBox="0 0 40 24" aria-hidden="true"
+          ><path d="M20 3 L32 21 H8 Z" fill="none" stroke="currentColor" stroke-width="2.5"
+          ></path><circle cx="20" cy="15" r="2.6" fill="currentColor"></circle></svg
+        >
+        <h3>Code and AI</h3>
+      </header>
+      <div>
+        <p>
+          Every December I do Advent of Code, and I'm sad it looks like it's coming to an end.
+        </p>
+        <p>
+          I'm very excited about what AI can do, and a little terrified of where it takes us. I hope
+          programmers don't end up as human-in-the-loop merge approvers.
+        </p>
+      </div>
+    </article>
+  </section>
+
+  <section class="latest" aria-labelledby="latest-heading">
+    <h2 id="latest-heading">Latest writing</h2>
+    {
+      latest.length ? (
+        <ul class="post-list">
+          {latest.map((post) => (
+            <li>
+              <span class="post-date">{formatDate(post.data.date)}</span>
+              <a href={`/blog/${post.id}/`}>{post.data.title}</a>
+              {post.data.summary && <p>{post.data.summary}</p>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty">Nothing published yet.</p>
+      )
+    }
+    <p class="more"><a href="/blog/">All writing</a></p>
+  </section>
+</Base>
+
+<style>
+  .hero {
+    position: relative;
+    min-height: min(78vh, 640px);
+    margin-top: -4.2rem; /* let the map run up behind the header */
+    padding: 6rem var(--gutter) 3rem;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+    border-bottom: 1px solid var(--rule);
+  }
+  .hero-map {
+    position: absolute;
+    inset: 0;
+  }
+  .hero-text {
+    position: relative;
+    max-width: 36rem;
+    /* map-label halo: keeps text readable where contours cross it */
+    text-shadow:
+      0 0 3px var(--paper),
+      0 0 6px var(--paper),
+      0 0 10px var(--paper);
+  }
+  .hero h1 {
+    font-size: clamp(4.2rem, 13vw, 9.5rem);
+    font-weight: 700;
+    line-height: 0.85;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.25em;
+  }
+  .hero p {
+    font-size: 1.25rem;
+    max-width: 34ch;
+  }
+
+  .key,
+  .latest {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: 4rem var(--gutter) 0;
+  }
+  .key-item {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, var(--measure));
+    gap: 0.5rem 2rem;
+    align-items: start;
+    padding: 1.75rem 0;
+    border-top: 1px solid var(--rule);
+  }
+  .key-item:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .key-item header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .key-item h3 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+  .key-item p:last-child {
+    margin-bottom: 0;
+  }
+  .symbol {
+    width: 40px;
+    height: 24px;
+    flex: none;
+    color: var(--ink);
+  }
+  .latest .more {
+    margin-top: 1.25rem;
+    font-family: var(--display);
+    font-size: 1.2rem;
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  @media (max-width: 760px) {
+    .key-item {
+      grid-template-columns: 1fr;
+    }
+    .hero {
+      min-height: 72vh;
+    }
+  }
+</style>

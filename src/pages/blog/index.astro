@@ -1,0 +1,28 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getPosts, formatDate } from '../../lib/posts';
+
+const posts = await getPosts('blog');
+---
+
+<Base title="Writing" description="Posts by Scott James on engineering, leadership, hiking and Scouting.">
+  <div class="page">
+    <h1>Writing</h1>
+    <p class="page-intro">Notes on engineering, leadership, walking and Scouting.</p>
+    {
+      posts.length ? (
+        <ul class="post-list">
+          {posts.map((post) => (
+            <li>
+              <span class="post-date">{formatDate(post.data.date)}</span>
+              <a href={`/blog/${post.id}/`}>{post.data.title}</a>
+              {post.data.summary && <p>{post.data.summary}</p>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty">Nothing published yet.</p>
+      )
+    }
+  </div>
+</Base>

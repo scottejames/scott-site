@@ -1,0 +1,27 @@
+---
+// Reading layout. Used by markdown pages (via `layout:` frontmatter) and blog posts.
+import Base from './Base.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  meta?: string;
+  frontmatter?: { title: string; description?: string };
+}
+const fm = Astro.props.frontmatter;
+const title = fm?.title ?? Astro.props.title;
+const description = fm?.description ?? Astro.props.description;
+const { meta } = Astro.props;
+---
+
+<Base title={title} description={description}>
+  <article class="page">
+    <header>
+      {meta && <span class="post-date">{meta}</span>}
+      <h1>{title}</h1>
+    </header>
+    <div class="prose">
+      <slot />
+    </div>
+  </article>
+</Base>
