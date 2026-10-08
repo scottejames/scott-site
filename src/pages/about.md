@@ -24,7 +24,11 @@ For the past two years I've been on a fitness journey, with the goal of exercisi
 
 ## Scouting
 
-I've been a Scout leader for a decade or so, supporting 10th and 1st Haywards Heath. I've worked with Beavers and I'm about to spend some time with Cubs. I'm now in a sort of retirement: no regular commitment, but I help out wherever groups need my skills. I look after the hike training programme for Mid Sussex and do other things like JOTI (Jamboree on the Internet).
+Most of my Scouting has been with the Scouts section. I was a Scout leader with 10th Haywards Heath for ten years, and more recently spent about a year with 1st Haywards Heath Scouts.
+
+I'm now in a sort of retirement: no regular commitment, but I help out wherever groups need my skills. Very recently that meant a few months with Beavers, and I'm about to spend some time with Cubs.
+
+I also look after the hike training programme for Mid Sussex and do other things like JOTI (Jamboree on the Internet).
 
 ## Home
 
