@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro';
 import Topo from '../components/Topo.astro';
 import { getPosts, formatDate } from '../lib/posts';
+import { url } from '../lib/url';
 
 const latest = (await getPosts('blog')).slice(0, 3);
 ---
@@ -109,7 +110,7 @@ const latest = (await getPosts('blog')).slice(0, 3);
           {latest.map((post) => (
             <li>
               <span class="post-date">{formatDate(post.data.date)}</span>
-              <a href={`/blog/${post.id}/`}>{post.data.title}</a>
+              <a href={url(`/blog/${post.id}/`)}>{post.data.title}</a>
               {post.data.summary && <p>{post.data.summary}</p>}
             </li>
           ))}
@@ -118,7 +119,7 @@ const latest = (await getPosts('blog')).slice(0, 3);
         <p class="empty">Nothing published yet.</p>
       )
     }
-    <p class="more"><a href="/blog/">All writing</a></p>
+    <p class="more"><a href={url('/blog/')}>All writing</a></p>
   </section>
 </Base>
 

@@ -1,6 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import { getPosts, formatDate } from '../../lib/posts';
+import { url } from '../../lib/url';
 
 const posts = await getPosts('blog');
 ---
@@ -15,7 +16,7 @@ const posts = await getPosts('blog');
           {posts.map((post) => (
             <li>
               <span class="post-date">{formatDate(post.data.date)}</span>
-              <a href={`/blog/${post.id}/`}>{post.data.title}</a>
+              <a href={url(`/blog/${post.id}/`)}>{post.data.title}</a>
               {post.data.summary && <p>{post.data.summary}</p>}
             </li>
           ))}

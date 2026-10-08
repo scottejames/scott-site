@@ -2,6 +2,7 @@
 import { render } from 'astro:content';
 import Prose from '../../layouts/Prose.astro';
 import { getPosts, formatDate } from '../../lib/posts';
+import { url } from '../../lib/url';
 
 export async function getStaticPaths() {
   const posts = await getPosts('blog');
@@ -14,5 +15,5 @@ const { Content } = await render(post);
 
 <Prose title={post.data.title} description={post.data.summary} meta={formatDate(post.data.date)}>
   <Content />
-  <p><a href="/blog/">Back to all writing</a></p>
+  <p><a href={url('/blog/')}>Back to all writing</a></p>
 </Prose>

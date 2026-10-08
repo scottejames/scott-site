@@ -2,6 +2,7 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  // Set this to the real domain once the site is deployed.
+  // With a custom domain: set `site` to it and `base` to '/'.
   site: 'https://scottejames.github.io',
+  base: '/scott-site',
 });

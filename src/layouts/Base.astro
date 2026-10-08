@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { site } from '../site.config';
+import { url } from '../lib/url';
 
 interface Props {
   title?: string;
@@ -10,7 +11,8 @@ interface Props {
 const { title, description = site.description, noindex = false } = Astro.props;
 const pageTitle = title ? `${title} | ${site.name}` : site.name;
 const path = Astro.url.pathname;
-const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+const isCurrent = (href: string) =>
+  href === '/' ? path === url('/') : path.startsWith(url(href));
 ---
 
 <!doctype html>
@@ -21,7 +23,7 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href={url('/favicon.svg')} type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -32,11 +34,11 @@ const isCurrent = (href: string) => (href === '/' ? path === '/' : path.startsWi
   <body>
     <a class="skip" href="#main">Skip to content</a>
     <header class="site-header">
-      <a class="brand" href="/">{site.name}</a>
+      <a class="brand" href={url('/')}>{site.name}</a>
       <nav aria-label="Main">
         {
           site.nav.map((item) => (
-            <a href={item.href} aria-current={isCurrent(item.href) ? 'page' : undefined}>
+            <a href={url(item.href)} aria-current={isCurrent(item.href) ? 'page' : undefined}>
               {item.label}
             </a>
           ))
