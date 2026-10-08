@@ -1,0 +1,64 @@
+---
+import { getCollection, render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.order - b.data.order);
+const entries = await Promise.all(projects.map(async (p) => ({ ...p, ...(await render(p)) })));
+---
+
+<Base title="Projects" description="Apps Scott James builds in his spare time.">
+  <div class="projects">
+    <h1>Projects</h1>
+    <p class="page-intro">Things I build in my spare time, because I still like to code.</p>
+    {
+      entries.map(({ data, Content }) => (
+        <article class="project">
+          <header>
+            <h2>{data.title}</h2>
+            <p class="tagline">{data.tagline}</p>
+          </header>
+          <div class="prose">
+            <Content />
+            <p class="open">
+              <a href={data.url}>{data.linkLabel}</a>
+            </p>
+          </div>
+        </article>
+      ))
+    }
+  </div>
+</Base>
+
+<style>
+  .projects {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: 2rem var(--gutter) 0;
+  }
+  .project {
+    display: grid;
+    grid-template-columns: 16rem minmax(0, var(--measure));
+    align-items: start;
+    gap: 0.5rem 2rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--rule);
+  }
+  .project h2 {
+    margin: 0 0 0.2em;
+    font-size: 2.2rem;
+  }
+  .tagline {
+    margin: 0;
+    color: var(--muted);
+  }
+  .open {
+    font-family: var(--display);
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  @media (max-width: 760px) {
+    .project {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

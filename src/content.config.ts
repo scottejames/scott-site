@@ -22,4 +22,16 @@ const priv = defineCollection({
   schema: postSchema,
 });
 
-export const collections = { blog, private: priv };
+// Projects: one markdown file each, shown on /projects/ in `order`.
+const projects = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/projects' }),
+  schema: z.object({
+    title: z.string(),
+    tagline: z.string(),
+    url: z.string().url(),
+    linkLabel: z.string(),
+    order: z.number().default(100),
+  }),
+});
+
+export const collections = { blog, private: priv, projects };
