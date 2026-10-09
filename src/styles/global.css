@@ -235,11 +235,16 @@ a:hover {
   padding: 0;
 }
 .post-list li {
+  position: relative;
   padding: 1.1rem 0;
   border-top: 1px solid var(--rule);
+  transition: background-color 0.15s;
 }
 .post-list li:last-child {
   border-bottom: 1px solid var(--rule);
+}
+.post-list li:hover {
+  background: var(--paper-raised);
 }
 .post-list a {
   font-family: var(--display);
@@ -247,6 +252,29 @@ a:hover {
   font-weight: 600;
   text-decoration: none;
   line-height: 1.15;
+}
+/* The title link covers the whole row, so the date, summary and "Read" cue are clickable too. */
+.post-list a::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.post-list li:hover a {
+  color: var(--path);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+.post-list li::after {
+  content: 'Read →';
+  content: 'Read →' / '';
+  display: inline-block;
+  margin-top: 0.4rem;
+  font: 600 1.05rem var(--display);
+  color: var(--path);
+  transition: transform 0.15s;
+}
+.post-list li:hover::after {
+  transform: translateX(4px);
 }
 .post-list p {
   margin: 0.3rem 0 0;
