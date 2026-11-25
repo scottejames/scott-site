@@ -1,0 +1,259 @@
+<!DOCTYPE html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>My coding guidelines for vibe coding | Scott James</title><meta name="description" content="The rulebook I give Claude Code so the web apps I vibe code stay simple, safe and readable."><link rel="icon" href="/scott-site/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap"><script data-goatcounter="https://scottejames.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script><link rel="stylesheet" href="/scott-site/_astro/Base.isBlzmCQ.css"></head><body><a class="skip" href="#main">Skip to content</a><header class="site-header"><a class="brand" href="/scott-site/">Scott James</a><nav aria-label="Main"><a href="/scott-site/">Home</a><a href="/scott-site/about/">About</a><a href="/scott-site/projects/">Projects</a><a href="/scott-site/blog/" aria-current="page">Writing</a><a href="/scott-site/private/">Private</a></nav></header><main id="main"><article class="page"><header><span class="post-date">9 October 2026</span><h1>My coding guidelines for vibe coding</h1></header><div class="prose"><p>Most of the web apps I build these days are vibe coded: I describe what I want and Claude Code writes the code. The speed is great, but left alone an AI model drifts. It adds abstractions nobody asked for, writes comments that just repeat the code, and makes a different choice in the second file from the one it made in the first.</p>
+<p>So every project gets a <code>CODING_GUIDELINES.md</code> at its root, and here’s how I use it:</p>
+<ul>
+<li><strong>The model reads it before it writes anything.</strong> A Claude Code skill loads the guidelines whenever code is about to change, and again before the change is handed back, so the model checks its own diff against them. This matters because it’s easy to follow the rules in the first file and forget them by the third.</li>
+<li><strong>Every rule points at real code.</strong> Rather than generic snippets, each principle names a file in the project that already does it right. This gives the model a concrete pattern to copy, and lets me check whether the rule is actually being followed.</li>
+<li><strong>Mistakes become rules.</strong> When something goes wrong, the lesson goes into the guidelines in the same change. The Amplify section’s “never rename a model” rule is there because a rename deleted a production table. This also catches conflicts: if a task seems to need something the guidelines forbid, the model has to say so instead of quietly picking one.</li>
+<li><strong>It’s about my stack.</strong> These cover React, TypeScript, Vite and AWS Amplify Gen2 because that’s what I build with. The general principles in sections 1 and 2 carry over to anything.</li>
+</ul>
+<p>The guidelines keep changing as I learn, so the latest version is always <a href="https://github.com/scottejames/horrizon/blob/main/CODING_GUIDELINES.md"><code>CODING_GUIDELINES.md</code> on GitHub</a>, where the history shows what’s new. Below is a copy as of 9 October 2026. File references are to the project it came from, a planning app I’m building, so treat them as examples.</p>
+<div class="repo-doc">
+<div class="repo-doc-header"><span>CODING_GUIDELINES.md</span><a href="https://github.com/scottejames/horrizon/blob/main/CODING_GUIDELINES.md">View latest on GitHub →</a></div>
+<div class="repo-doc-body">
+<p>Prescriptive, forward-looking rules for writing code in this repo — as opposed to
+<code>designs/design-principles.md</code>, which is retrospective (<em>why</em> past decisions were
+made). This document is normative: follow it for new code, and bring existing code
+into line with it opportunistically when you’re already touching a file, not as a
+dedicated pass.</p>
+<p>Scope: this repo’s actual stack — <strong>React 19 + TypeScript + Vite</strong> (frontend),
+<strong>AWS Amplify Gen2</strong> (<code>amplify/data</code>, <code>amplify/auth</code>, <code>amplify/functions</code> — the
+backend), and <strong>Vitest + React Testing Library + Playwright</strong> (verification). Every
+principle below is illustrated with a real example already in this codebase where
+one exists, rather than a generic snippet, so this stays checkable against the code
+instead of just aspirational.</p>
+<h2 id="1-general-principles-apply-to-everything">1. General principles (apply to everything)</h2>
+<ul>
+<li><strong>Prefer the smallest thing that solves the named problem.</strong> No speculative
+flexibility, no config options nobody asked for, no abstraction built for a second
+use case that doesn’t exist yet. Three similar lines across two tools is better
+than a shared helper extracted for them — see <code>designs/design-principles.md</code>’s
+“Ship simple, add flexibility from real feedback” for the product-level version of
+this same rule.</li>
+<li><strong>Optimize for the next reader, not for cleverness.</strong> A junior engineer or a future
+you, six months on, should be able to read a function top to bottom and understand
+it without reaching for a debugger. If a one-liner needs a comment to explain what
+it does, it’s usually clearer as three lines that don’t.</li>
+<li><strong>Comments explain <em>why</em>, never <em>what</em>.</strong> Well-named identifiers already say what
+the code does. A comment earns its place only when it records a non-obvious
+constraint, a workaround for a specific bug, or a reason a reader would otherwise
+have to reverse-engineer — see almost any comment in <code>TaskStoreContext.tsx</code> or
+<code>RemindersContext.tsx</code> for the standard this repo already holds itself to.</li>
+<li><strong>DRY is about knowledge, not text.</strong> Two pieces of code that look similar but
+change for unrelated reasons should stay separate, even if that means some
+duplication. Only unify code whose <em>reason to change</em> is genuinely the same.</li>
+<li><strong>YAGNI beats extensibility theater.</strong> Don’t add a plugin system, a strategy
+pattern, or a generic config object for a requirement that’s currently exactly
+one case. Every tool in <code>src/tools/</code> still only needs a <code>meta.ts</code> + <code>index.tsx</code> —
+resist the urge to make that framework “more flexible” ahead of an actual second
+need for the flexibility.</li>
+</ul>
+<h2 id="2-solid-adapted-to-functional-typescriptreact">2. SOLID, adapted to functional TypeScript/React</h2>
+<p>SOLID was written for class-based OOP; this codebase has no classes outside
+generated SDK internals. The principles still apply — just to functions, hooks, and
+modules instead of classes. Treat “a class” below as “a function, hook, or module.”</p>
+<ul>
+<li><strong>S — Single Responsibility.</strong> A function, hook, or component should have one
+reason to change. <code>TaskStoreContext</code>’s <code>addTask</code>/<code>updateTask</code>/<code>deleteTask</code> are each
+a few lines doing exactly one thing; <code>useAiTool</code> only knows how to call a tool and
+track loading/error/output, nothing about what any specific tool’s input looks
+like. If a function’s name needs “and” to describe it, split it.</li>
+<li><strong>O — Open/Closed.</strong> Prefer extension over modification. This repo’s tool registry
+is the canonical example: adding a tool means creating a new folder and one line in
+<code>registry.ts</code> — <code>Home.tsx</code>, <code>App.tsx</code>, and every other tool are untouched. When
+adding a new case to an existing concept (a new AI tool, a new <code>ToolCategory</code>),
+look for the place that’s already designed to be extended before editing
+unrelated call sites.</li>
+<li><strong>L — Liskov Substitution.</strong> Anything implementing a shared shape must be usable
+everywhere that shape is expected, without surprising the caller. Every
+<code>ToolDefinition</code> (<code>meta</code> + <code>Component</code>) renders and navigates identically from
+<code>registry.ts</code>’s point of view, whether the tool is AI-backed or pure client-side —
+<code>App.tsx</code> never needs to know which. If a new implementation of an existing
+interface needs a special case at the call site, the interface is wrong, not just
+the new implementation.</li>
+<li><strong>I — Interface Segregation.</strong> Depend on the narrowest shape that does the job, not
+a fat one with unused fields. <code>ToolMeta</code> carries exactly <code>id</code>, <code>name</code>, <code>tagline</code>,
+<code>icon</code>, <code>category</code> — nothing a tool doesn’t need. A component that only needs to
+call <code>addTask</code> shouldn’t have to import all of <code>TaskStoreContext</code>’s surface if a
+narrower hook would do; don’t force a caller to depend on nine props to use one.</li>
+<li><strong>D — Dependency Inversion.</strong> Components should depend on an abstraction (a hook,
+a context), not the concrete implementation underneath it. No tool component calls
+<code>generateClient()</code> or <code>fetch</code> directly — they call <code>useTaskStore()</code>, <code>useAiTool()</code>,
+<code>useReminders()</code>. That’s what let the entire Shared Task Store move from
+<code>localStorage</code> to DynamoDB (<code>designs/user-personalization.md</code>’s “What Phase 3
+built”) without a single tool component changing — they only ever depended on the
+hook’s abstraction, never on how it was implemented.</li>
+</ul>
+<h2 id="3-react--typescript-conventions">3. React + TypeScript conventions</h2>
+<ul>
+<li><strong>Strict mode, always.</strong> <code>tsconfig.app.json</code> already has <code>noUnusedLocals</code>,
+<code>noUnusedParameters</code>, and friends on — don’t relax these to make an error go away;
+fix the actual unused code or parameter.</li>
+<li><strong>Function components + hooks only.</strong> No class components anywhere in this repo;
+don’t introduce one.</li>
+<li><strong>Type props and state explicitly</strong>, especially when a value can be <code>null</code>/
+<code>undefined</code> — see <code>TaskEditDraft</code>, <code>AddTaskInput</code> in <code>TaskStoreContext.tsx</code> for the
+house style: a plain <code>interface</code>, no unnecessary generics.</li>
+<li><strong>Hooks only at the top level, never inside a condition or loop</strong> — this is a React
+rule, not a style preference; breaking it produces silent, hard-to-debug state bugs.</li>
+<li><strong>Prefer a <code>Set</code>/<code>Map</code> keyed lookup over <code>.find()</code> in a loop</strong> when a value is
+checked repeatedly against a growing collection (see <code>expandedGroupIds</code> in
+<code>everythingPile/index.tsx</code>).</li>
+<li><strong>Optimistic local update, then reconcile</strong> for anything backed by a network call:
+update React state immediately so the UI feels instant, fire the network call
+without blocking on it, and let the source of truth (an <code>observeQuery()</code> emission,
+or a <code>.catch()</code> that logs and leaves state as-is) reconcile afterward. Every
+context in <code>src/context/</code> that talks to Amplify Data follows this shape — don’t
+introduce a spinner-then-wait pattern for a write that doesn’t need one.</li>
+<li><strong>Guard double-submission with a <code>useRef</code>, not a state check or a <code>disabled</code> prop
+alone.</strong> Two fast click handlers can both run before React re-renders a disabled
+button, so a state-based guard can still see the stale pre-click value. See the
+<code>sentRef</code>/<code>promotedIdsRef</code> guards in <code>taskBreakdown/index.tsx</code>,
+<code>brainDumpSorter/index.tsx</code>, and <code>sideQuestLog/index.tsx</code> for the pattern — flip
+the ref synchronously as the very first line of the handler, before anything else
+runs.</li>
+<li><strong>Pick the correct ARIA role for what a control actually does</strong> — a set of
+mutually exclusive toggle buttons that just filter a view is <code>role="group"</code> with
+<code>aria-pressed</code> per button, not <code>role="tablist"</code>/<code>"tab"</code> unless you also implement
+the arrow-key navigation and <code>aria-controls</code> that pattern implies. Getting this
+wrong reads fine visually but is actively misleading to assistive tech — see
+<code>Home.tsx</code>’s category toggle for the corrected version of this exact mistake.</li>
+</ul>
+<h2 id="4-state-management--context">4. State management &amp; Context</h2>
+<ul>
+<li><strong>A Context should do one job.</strong> <code>EnergyContext</code> only knows Spoons;
+<code>RemindersContext</code> only knows reminders/fired events. Don’t fold unrelated state
+into an existing provider because it’s convenient — add a new context (see
+<code>designs/architecture-overview.md</code>’s persistent-provider pattern for how this
+project already extends the pattern one provider at a time).</li>
+<li><strong>Mount persistent providers once, at the app root</strong> (<code>main.tsx</code>), not inside the
+tree of whichever tool happens to need them — this is what lets Distract Me’s
+audio, Reminders’ timers, and the Task Store all keep working while the user
+navigates to an unrelated tool.</li>
+<li><strong>Memoize a context’s value only when the provider re-renders often and the value
+identity matters to consumers</strong> — don’t reach for <code>useMemo</code> on every context by
+default; this codebase’s providers re-render infrequently enough that it hasn’t
+been a real problem yet. Reach for it when it demonstrably is.</li>
+<li><strong>Split state that changes for different reasons into different contexts</strong>, even
+if they’re logically related. Task Store’s <code>activeCategory</code> (which tab was
+showing) was deliberately moved into <code>ToolNavigationContext</code>, not bundled into
+<code>TaskStoreContext</code>, because it changes for a different reason (navigation, not
+task data) and needed to survive a different lifecycle event (Home unmounting).</li>
+<li><strong>A context’s hook must throw if used outside its provider</strong> — every <code>useX()</code> in
+this repo (<code>useTaskStore</code>, <code>useAuth</code>, <code>useEnergy</code>, …) throws a specific “must be
+used within a …Provider” error rather than silently returning <code>null</code>. Keep doing
+this; a silent <code>null</code> return defers the failure to a confusing crash somewhere
+else entirely.</li>
+</ul>
+<h2 id="5-aws-amplify-gen2-backend">5. AWS Amplify Gen2 (backend)</h2>
+<ul>
+<li><strong>Deny-by-default, and the most specific rule wins.</strong> Every model must declare its
+own <code>.authorization(...)</code> — never rely on <code>defaultAuthorizationMode</code> alone for a
+model that needs different rules than <code>runAiTool</code>/<code>logEvent</code>’s public API key (see
+<code>amplify/data/resource.ts</code>).</li>
+<li><strong>Set <code>authMode</code> explicitly on any client used against an owner-scoped model.</strong> The
+generated Data client’s default <code>authMode</code> follows the <em>schema’s</em>
+<code>defaultAuthorizationMode</code>, not a specific model’s own rule — a client call against
+an <code>allow.owner()</code> model without an explicit <code>authMode: 'userPool'</code> is rejected
+server-side with a silent “Not Authorized” that looks fine in the UI (see
+<code>src/lib/dataClient.ts</code>’s comment, and <code>designs/user-personalization.md</code>’s “What
+Phase 2 built” for the real incident this caused).</li>
+<li><strong>Keep secrets server-side, always.</strong> The Anthropic API key lives only as an
+Amplify secret injected into the <code>ai-assist</code> Lambda’s environment — it is never
+read from a frontend env var, never bundled, never logged. Don’t add a new
+secret-consuming call from frontend code; route it through a Lambda.
+Build-time frontend env vars are not secret — anything in a Vite <code>import.meta.env</code>
+value ships in the bundle.</li>
+<li><strong>Prefer a plain string field over a GraphQL enum for a value that might evolve</strong>,
+the same way <code>Task.category</code>/<code>Task.size</code> and <code>Reminder.repeat</code> are plain strings —
+a GraphQL enum can’t hold a value with a hyphen (<code>'not-your-problem'</code> would be
+illegal), and changing an enum’s members is a breaking schema change in a way a
+string field’s accepted values are not.</li>
+<li><strong>A client-generated id, set explicitly on <code>create()</code>,</strong> is what makes optimistic
+updates and idempotent migration retries possible — see every <code>addX</code> function in
+<code>TaskStoreContext.tsx</code>/<code>RemindersContext.tsx</code> calling <code>crypto.randomUUID()</code> itself
+rather than waiting for the backend to assign one.</li>
+<li><strong>A relation you don’t need referential integrity for should be a plain field, not
+<code>belongsTo</code>/<code>hasMany</code>.</strong> <code>Task.projectId</code> is a plain optional string specifically so
+deleting a project can detach its tasks (not cascade-delete them) using ordinary
+application logic, instead of fighting a relation’s own delete policy.</li>
+<li><strong>Never rename a model (or otherwise force a table replacement) against a
+deployed environment without flagging it first and getting explicit sign-off.</strong>
+Amplify can’t rename a DynamoDB table in place — a renamed model is a brand-new
+table under the new name, and the old one (with all its data) is deleted. This
+already happened once for real: renaming <code>Program</code> to <code>AreaOfResponsibility</code>
+wiped that table in both the sandbox and production the moment the change
+deployed (see <code>design/architecture-overview.md</code>’s “Schema changes that destroy
+data” entry). Adding/removing a plain field doesn’t have this problem — DynamoDB
+items are schemaless past the key, so only structural changes like a rename need
+this caution.</li>
+</ul>
+<h2 id="6-testing-vitest--testing-library--playwright">6. Testing (Vitest + Testing Library + Playwright)</h2>
+<ul>
+<li><strong>Test behavior, not implementation.</strong> Query by role, label, or visible text
+(<code>getByRole</code>, <code>getByLabelText</code>) — not by CSS class or a test-only id — so a test
+keeps passing through a refactor that doesn’t change what the user sees or does.</li>
+<li><strong>Wrap a test in the real providers the component actually depends on, mocking only
+the network/auth edges</strong> (<code>aws-amplify/auth</code>, <code>aws-amplify/utils</code>’s <code>Hub</code>, and
+<code>../lib/dataClient</code>’s <code>client</code> where a backend call is exercised) — not a fake
+version of your own context. This is why every context test in this repo composes
+the real <code>AuthProvider</code>/<code>EnergyProvider</code>/etc. rather than stubbing <code>useAuth</code>.</li>
+<li><strong>A guard against a race (double-click, Strict Mode double-invoke) deserves a
+regression test that reproduces the race</strong>, not just a test of the happy path —
+see <code>pomodoroTimer/index.test.tsx</code>’s fake-timer test for the double-pop-sound bug,
+and the double-send tests added alongside the <code>sentRef</code> guards above.</li>
+<li><strong>Reproduce a cross-mount bug by actually mounting/unmounting the component under
+test, in one shared provider tree with <code>rerender()</code></strong> — two separate <code>render()</code>
+calls each get a fresh, disconnected provider tree and will not reproduce a bug
+that only exists because state survives (or fails to survive) a remount. See
+<code>Home.test.tsx</code>’s tab-persistence tests for the pattern.</li>
+<li><strong>Verify an AI-backed tool’s plain-text output parsing with intercepted
+Playwright network responses</strong> (<code>page.route</code>), not just a live sandbox call — the
+format-guard bug in <code>designs/ai-assist-tools.md</code> is exactly the class of bug this
+catches early.</li>
+<li><strong>When you find yourself manually testing the same thing twice, write it down as a
+real test instead.</strong></li>
+</ul>
+<h2 id="7-error-handling">7. Error handling</h2>
+<ul>
+<li><strong>Fire-and-forget backend writes get a <code>.catch(console.error)</code>, not a silent
+swallow and not a re-thrown exception that would crash an optimistic update
+already shown to the user.</strong> The UI has already moved on; log the failure for
+diagnosis rather than surfacing a disruptive error for something the user can’t
+act on in the moment.</li>
+<li><strong>A user-initiated action that can fail (an AI call, a sign-in) gets a real error
+state surfaced in the UI</strong>, with a plain-language fallback message — see
+<code>useAiTool.ts</code>’s <code>catch</code> block — not a console-only log the user never sees for
+something they’re actively waiting on.</li>
+<li><strong>Never let a caught error be silently discarded with an empty <code>catch {}</code></strong> unless
+the comment directly above it explains why swallowing it is correct (see
+<code>readStored</code>’s <code>catch { return []; }</code> in <code>TaskStoreContext.tsx</code> — a corrupt
+<code>localStorage</code> value falling back to empty is the deliberate, documented
+behavior, not an oversight).</li>
+<li><strong>Validate at the boundary, trust internal code past it.</strong> A Lambda handler
+validates <code>event.arguments</code>; a function called only by other code in the same
+module trusts its caller’s types instead of re-checking them.</li>
+</ul>
+<h2 id="8-security">8. Security</h2>
+<ul>
+<li><strong>Never introduce <code>dangerouslySetInnerHTML</code></strong> for any user-supplied or
+AI-generated content. Every tool in this repo renders AI output as plain text
+through ordinary JSX — the <code>FORMAT_GUARD_INSTRUCTION</code> in <code>ai-assist/handler.ts</code>
+exists specifically so a model reply never needs to be parsed as markdown/HTML in
+the first place. If a future tool seems to need raw HTML rendering, that’s a
+signal to reconsider the tool’s design, not to add <code>dangerouslySetInnerHTML</code>.</li>
+<li><strong>No secret, token, or credential ever appears in frontend code, a committed file,
+or a build-time env var.</strong> See Section 5 — Amplify secrets are the only sanctioned
+path for anything like this.</li>
+<li><strong>Treat every external input (AI output, <code>localStorage</code> contents, a URL param) as
+untrusted</strong> — parse it defensively (<code>try { JSON.parse(...) } catch { fall back }</code>,
+as every context’s <code>readStored</code>/<code>fromBackendItem</code> already does) rather than
+assuming it matches the expected shape.</li>
+</ul>
+<h2 id="keeping-this-useful">Keeping this useful</h2>
+<p>Like <code>designs/design-principles.md</code>, this is a living document. When a new pattern
+gets established, a principle above turns out to be wrong, or a real bug reveals a
+rule that should have been here, update this file in the same change rather than
+letting the lesson live only in <code>CHANGELOG.md</code> or a conversation.</p>
+</div>
+</div>
+<p><a href="/scott-site/blog/">Back to all writing</a></p></div></article></main><footer class="site-footer"><p>Made in Haywards Heath, West Sussex.</p><ul><li><a href="https://www.linkedin.com/in/scottejames/" rel="me">LinkedIn</a></li><li><a href="https://github.com/scottejames" rel="me">GitHub</a></li></ul></footer></body></html>
